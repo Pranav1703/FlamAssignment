@@ -41,7 +41,7 @@ func DlqCmd(store *storage.Store) *cobra.Command {
 
 	// --- 'dlq retry' Subcommand ---
 	retryCmd := &cobra.Command{
-		Use:   "retry [job-id]",
+		Use:   "retry <job-id>",
 		Short: "Retry a specific job from the DLQ",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

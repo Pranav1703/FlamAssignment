@@ -30,7 +30,7 @@ func ConfigCmd(cfg *config.Config) *cobra.Command {
 
 
 	setCmd := &cobra.Command{
-		Use:   "set [key] [value]",
+		Use:   "set <key> <value>",
 		Short: "Set a configuration value (max-retries, backoff-base)",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {

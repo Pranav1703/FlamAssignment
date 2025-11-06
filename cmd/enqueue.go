@@ -13,7 +13,7 @@ import (
 
 func EnqueueCmd(store *storage.Store, cfg *config.Config) *cobra.Command {
 	var EnqueueCmd = &cobra.Command{
-		Use: "enqueue [job(json)]",
+		Use: "enqueue <job(json)>",
 		Short: "adds the job to the queue",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error{

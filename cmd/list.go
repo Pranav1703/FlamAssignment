@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"queueCtl/internal/config"
 	"queueCtl/internal/storage"
 
 	"github.com/spf13/cobra"
@@ -9,7 +13,7 @@ import (
 
 func ListCmd(store *storage.Store) *cobra.Command{
 	cmd:= &cobra.Command{
-		Use: "list --state",
+		Use: "list",
 		Short: "List jobs by state",
 		RunE: func(cmd *cobra.Command, args []string) error {
 				// Get the --state flag
@@ -42,7 +46,7 @@ func ListCmd(store *storage.Store) *cobra.Command{
 		return cmd
 }
 
-func StatusCmd(store *storage.Store) *cobra.Command {
+func StatusCmd(store *storage.Store,cfg *config.Config) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
 		Short: "Show a summary of job states",
@@ -61,10 +65,30 @@ func StatusCmd(store *storage.Store) *cobra.Command {
 			for state, count := range stats {
 				fmt.Printf("%s: \t%d\n", state, count)
 			}
-			
-			// Placeholder for worker status
+		
 			fmt.Println("\n--- Worker Status ---")
-			fmt.Println("Workers: \t0 (worker command not implemented yet)")
+			statusPath := filepath.Join(cfg.DataDir, "worker.status")
+			data, err := os.ReadFile(statusPath)
+
+			if err != nil {
+				if os.IsNotExist(err) {
+					fmt.Println("Workers: \t0 (stopped)")
+					return nil
+				}
+				return fmt.Errorf("could not read worker status: %w", err)
+			}
+
+			var status WorkerStatus
+			if err := json.Unmarshal(data, &status); err != nil {
+				return fmt.Errorf("could not parse worker status: %w", err)
+			}
+			
+			// Optional: You could add a check here to see if the PID
+			// is still actually running, but for this assignment,
+			// this is likely good enough.
+
+			
+			fmt.Printf("Workers: \t%d started at: %v \nPID of worker pool: %d", status.Count, status.StartedAt, status.PID )
 
 			return nil
 		},

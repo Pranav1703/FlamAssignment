@@ -18,5 +18,5 @@ type Job struct {
     MaxRetries  int       `json:"max_retries"`
     CreatedAt   time.Time `json:"created_at"`
     UpdatedAt   time.Time `json:"updated_at"`
-    NextRunAt   time.Time `json:"-"` // We add this for backoff, ignore in JSON
+    NextRunAt   time.Time `json:"next_run_at"`
 }
