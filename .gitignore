@@ -1,2 +1,4 @@
 db/
 testCmd.txt
+/queuectl.exe
+/workers.log
