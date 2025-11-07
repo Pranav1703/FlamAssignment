@@ -141,10 +141,50 @@ $ ./queuectl.exe dlq retry job-fail
 2025/11/07 17:43:19 Job job-fail moved from DLQ to 'pending' state.
 ```
 ## Architecture Overview 
+1. **CLI (Cobra)**: The queuectl binary, built with cobra, acts as the user-facing controller. It's a short-lived process that writes commands (like enqueue or dlq retry) to the database and then exits.
+
+2. **Storage (SQLite)**: The single source of truth is a SQLite database (queue.db). This was chosen over a simple file to safely manage concurrent access from multiple workers, preventing race conditions.
+
+    - WAL Mode: The database runs in Write-Ahead Log (WAL) mode to allow high-concurrency reads and writes, which is critical for a multi-worker setup.
+
+3. **Job Lifecycle**: Jobs transition through a well-defined state machine:
+
+    - pending: A job is enqueued and waiting.
+
+    - processing: A worker has locked the job.
+
+    - completed: The job's command exited with code 0.
+
+     - failed: The command exited with a non-zero code. The job is scheduled for a retry using exponential backoff.
+
+    - dead: The job exhausted its max_retries and is moved to the Dead Letter Queue.
+
+4. **Worker Pool (Goroutines)**: The queuectl worker start --count N command starts one OS process, which in turn spawns N goroutines (a worker pool).
+
+    - Polling: Each worker goroutine runs an independent loop, polling the database to find an available job.
+
+    - Atomic Locking: To prevent two workers from grabbing the same job, the FindAndLockJob function executes a SELECT and UPDATE within a database transaction. This makes the "leasing" of a job an atomic operation.
+
+    - Graceful Shutdown: The worker start process listens for SIGINT and SIGTERM signals. Upon receiving one, it uses a Go context to signal all workers to finish their current job and exit. A sync.WaitGroup ensures the main process doesn't exit until all workers are done.
+
+    - Stale Job Recovery: The worker query is designed to recover "orphaned" jobs. If a job is in the processing state for too long (e.g., 5 minutes), it's considered stale (due to a worker crash), and another worker will pick it up.
+
+ 5. **Inter-Process Communication (IPC)**: A simple IPC mechanism is used for the status and stop commands.
+
+    - worker start writes its Process ID (PID) to a worker.status file.
+
+    - status reads this file to report the number of active workers.
+
+    - stop reads the PID from this file and sends a SIGTERM signal (using taskkill or syscall.SIGINT) to the worker process, triggering the graceful shutdown.
 
 ## Assumptions & Trade-offs
 - **Queue Mechanism**: Implemented a database polling model where workers run a SELECT loop. This is simple but less efficient at scale than a true pub/sub system (like RabbitMQ)
-- **Inter-Process Communication (IPC)**: Used a PID/status file for the stop and status commands. This is a simple IPC method but is a brittle solution (can become "stale" on a crash)
+- **Inter-Process Communication (IPC)**: Used a PID/status file for the stop and status commands. This is a simple IPC method but is a brittle solution as it can become stale if the worker process crashes, requiring manual cleanup.
+- **Storage Engine**: Using SQLite provides an embedded, zero-dependency store. This trades the high write-concurrency of a networked database (e.g., Postgres) for simplicity.
+
+- **Job Execution**: Using os/exec with sh -c is flexible but assumes all job commands are trusted. It provides no sandboxing.
+
+- **Observability**: Capturing stdout/stderr to a DB output column aids DLQ debugging but is less scalable than streaming logs to a dedicated service.
 ## Testing Instructions
 A shell script, test.sh, is included to provide an end-to-end validation of the core application flow.
 The script will:
