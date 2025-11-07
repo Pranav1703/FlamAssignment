@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"queueCtl/cmd"
 	"queueCtl/internal/config"
-	"queueCtl/internal/storage"
+	"queueCtl/internal/database"
 )
 
 func main() {

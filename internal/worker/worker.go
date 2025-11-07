@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"queueCtl/internal/config"
 	"queueCtl/internal/model"
-	"queueCtl/internal/storage"
+	"queueCtl/internal/database"
 	"sync"
 	"time"
 )

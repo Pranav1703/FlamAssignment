@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"queueCtl/internal/model"
-	"queueCtl/internal/storage"
+	"queueCtl/internal/database"
 	"time"
 
 	"github.com/spf13/cobra"

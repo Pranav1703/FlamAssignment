@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"queueCtl/internal/config"
-	"queueCtl/internal/storage"
+	"queueCtl/internal/database"
 	"queueCtl/internal/worker"
 	"runtime"
 	"strconv"
@@ -147,3 +147,4 @@ func WorkerCmd(store *storage.Store, cfg *config.Config) *cobra.Command {
 
 	return workerCmd
 }
+

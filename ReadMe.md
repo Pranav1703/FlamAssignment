@@ -4,18 +4,7 @@
 
 This system supports persistent job storage, a concurrent worker pool, automatic job retries with exponential backoff, and a Dead Letter Queue (DLQ).
 
-## Features
-
-* **Persistent Job Storage:** Job state is persisted in an embedded SQLite database, ensuring data integrity across application restarts.
-* **Concurrent Worker Pool:** The system utilizes a goroutine-based worker pool to process multiple jobs in parallel.
-* **Atomic Job Locking:** Jobs are leased to workers using database transactions, preventing race conditions and ensuring that a job is only processed by one worker at a time.
-* **Retry Mechanism:** Failed jobs are automatically retried with a configurable exponential backoff delay.
-* **Dead Letter Queue (DLQ):** Jobs that exhaust their retry attempts are moved to a DLQ for manual inspection and intervention.
-* **Graceful Shutdown:** The worker process listens for `SIGINT` and `SIGTERM` signals, allowing in-progress jobs to finish before the process exits.
-* **CLI Interface:** All system interactions are handled through a clean, `cobra`-based CLI.
-
----
-
+[Google drive link to demo video](https://drive.google.com/file/d/15I35wRxAk-0LnYyPdD6jaerTL5lJZOP8/view?usp=sharing)
 ## Setup Instructions
 
 ### 1. Prerequisites

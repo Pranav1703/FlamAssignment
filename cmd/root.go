@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"queueCtl/internal/config"
-	"queueCtl/internal/storage"
+	"queueCtl/internal/database"
 
 	"github.com/spf13/cobra"
 )
