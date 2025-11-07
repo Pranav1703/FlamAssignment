@@ -5,9 +5,9 @@
 This system supports persistent job storage, a concurrent worker pool, automatic job retries with exponential backoff, and a Dead Letter Queue (DLQ).
 
 [Google drive link to demo video](https://drive.google.com/file/d/15I35wRxAk-0LnYyPdD6jaerTL5lJZOP8/view?usp=sharing)
-## Setup Instructions
+# Setup Instructions
 
-### 1. Prerequisites
+## 1. Prerequisites
 
 * **Go:** Version 1.18 or higher.
 * **C Compiler:** The `mattn/go-sqlite3` driver requires CGo.
@@ -15,7 +15,7 @@ This system supports persistent job storage, a concurrent worker pool, automatic
     * **Linux (Debian/Ubuntu):** `sudo apt install build-essential`
     * **Windows:** A valid `gcc` installation, such as one provided by [TDM-GCC](http://tdm-gcc.tdragon.net/) or `mingw-w64`.
 
-### 2. Build
+## 2. Build
 
 Clone the repository and compile the binary:
 
