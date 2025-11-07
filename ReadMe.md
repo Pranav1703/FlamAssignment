@@ -69,6 +69,7 @@ Updated. backoff-base = 3
 ```
  
 ### Start the Worker Pool
+You must run this in a separate terminal because it is a long running process.
 ```bash
 # Start a pool of 3 workers
 ./queuectl worker start --count 3
