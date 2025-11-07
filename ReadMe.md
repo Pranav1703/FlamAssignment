@@ -40,6 +40,25 @@ go build -o queuectl.exe
 ```
 ## 3. Usage
 
+### Config Commands
+```bash
+# Values that can be updated: data-dir, backoff-base, max-retries
+./queuectl config set backoff-base 3
+
+# shows current config values
+./queuectl config show
+```
+- output
+```bash
+Updated. backoff-base = 3
+
+{
+  "data_dir": "./db",
+  "max_retries": 4,
+  "backoff_base": 3
+}
+```
+
 ### Enqueue a New Job
 ```bash
 # Enqueue a simple job
@@ -54,20 +73,49 @@ go build -o queuectl.exe
 # Start a pool of 3 workers
 ./queuectl worker start --count 3
 ```
+- output:
+```bash
+$ ./queuectl worker start --count 3
+2025/11/07 16:09:56 Starting 3 worker(s)...
+2025/11/07 16:09:56 Use 'worker stop' command in different terminal to shutdown the workers.
+2025/11/07 16:09:56 Worker 1: Starting
+2025/11/07 16:09:56 Worker 2: Starting
+2025/11/07 16:09:56 Worker 3: Starting
+2025/11/07 16:09:57 Worker 3: Processing job job-1 (command: echo Hello World)
+2025/11/07 16:09:57 Worker 3: Job job-1 completed successfully
+```
 
 ### Stop the Worker Pool
 ```bash
 ./queuectl worker stop
 ```
-
 ### Check System Status
 ```bash
 ./queuectl status
 ```
+- output
+```bash
+./queuectl.exe status
+--- Job Queue Status ---
+completed:      2
+failed:         1
 
+--- Worker Status ---
+Workers:        3 started at: 2025-11-07 17:41:20.2522872 +0530 IST 
+PID of worker pool: 27960
+```
 ### List Jobs by State
+job states: pending, processing, completed, failed, dead
 ```bash
 ./queuectl list --state failed
+```
+-output
+```bash
+./queuectl.exe list --state pending
+--- Jobs in 'pending' state ---
+ID              Command         Attempts
+job-2           echo Hello World2               0
+job-fail                ech Hello World2                0
 ```
 
 ### Manage the Dead Letter Queue (DLQ)
@@ -76,30 +124,48 @@ go build -o queuectl.exe
 ./queuectl dlq list
 
 # Re-queue a specific job (moves it from 'dead' to 'pending')
-./queuectl dlq retry job-2
+./queuectl dlq retry job-fail
 ```
+- output
+```bash
+$ ./queuectl dlq list
+--- Jobs in DLQ ---
 
+--- Job 1 ---
+ID:             job-2
+Command:        exit 1
+Attempts:       4
+Last Updated:   2025-11-07T19:20:27+05:30
+Last Output:    (empty)               4
+$ ./queuectl.exe dlq retry job-fail
+2025/11/07 17:43:19 Job job-fail moved from DLQ to 'pending' state.
+```
+## Architecture Overview 
+
+## Assumptions & Trade-offs
+- **Queue Mechanism**: Implemented a database polling model where workers run a SELECT loop. This is simple but less efficient at scale than a true pub/sub system (like RabbitMQ)
+- **Inter-Process Communication (IPC)**: Used a PID/status file for the stop and status commands. This is a simple IPC method but is a brittle solution (can become "stale" on a crash)
 ## Testing Instructions
 A shell script, test.sh, is included to provide an end-to-end validation of the core application flow.
 The script will:
 
-Build the queuectl binary.
+1. Build the queuectl binary.
 
-Clear any old database files.
+2. Clear any old database files.
 
-Enqueue a successful job, a failing job, and a long-running job.
+3. Enqueue a successful job, a failing job, and a long-running job.
 
-Start the worker pool in the background and log its output.
+4. Start the worker pool in the background and log its output.
 
-Wait 15 seconds to allow the retry/backoff mechanism to run.
+5. Wait 15 seconds to allow the retry/backoff mechanism to run.
 
-Gracefully stop the worker pool.
+6. Gracefully stop the worker pool.
 
-Check the final database status (expecting 2 completed, 1 dead).
+7. Check the final database status (expecting 2 completed, 1 dead).
 
-Verify the failed job is in the DLQ and then retry it.
+8. Verify the failed job is in the DLQ and then retry it.
 
-Print the worker logs for review.
+9. Print the worker logs for review.
 
 ### Running the Test Script
 ```bash

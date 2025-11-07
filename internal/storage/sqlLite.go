@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"queueCtl/internal/model"
 	"time"
 
@@ -22,7 +23,8 @@ func (s *Store)Init() error{
 		max_retries integer not null default 3,
 		created_at DATETIME not null,
 		updated_at DATETIME not null,
-		next_run_at DATETIME
+		next_run_at DATETIME,
+		output text
 	);`
 	_, err := s.Db.Exec(createJobTable)
 	return err
@@ -78,6 +80,7 @@ func (s *Store)ListJobsByState(state string) ([]model.Job, error){
 			&job.CreatedAt,
 			&job.UpdatedAt,
 			&job.NextRunAt,
+			&job.Output,
 		); err!= nil{
 			return nil,err
 		}
@@ -119,12 +122,13 @@ func(s *Store)FindAndLock()(*model.Job,error){
 	}
 	defer tx.Rollback()
 	statement := `select * from jobs where state =? or 
-				(state = ? and next_run_at <= ?) order by created_at ASC LIMIT 1`
+				(state = ? and next_run_at <= ?) or (state = ? and updated_at<= ?) order by created_at ASC LIMIT 1`
 
-	row := tx.QueryRow(statement,model.StatePending, model.StateFailed,time.Now())
+	row := tx.QueryRow(statement,model.StatePending, model.StateFailed,time.Now(),model.StateProcessing,time.Now())
 
 	var job model.Job
-
+	var nextRunAtStr sql.NullString
+	var outputStr sql.NullString
 	err = row.Scan(
 			&job.ID,
 			&job.Command,
@@ -133,7 +137,8 @@ func(s *Store)FindAndLock()(*model.Job,error){
 			&job.MaxRetries,
 			&job.CreatedAt,
 			&job.UpdatedAt,
-			&job.NextRunAt,
+			&nextRunAtStr,
+			&outputStr,
 	)
 
 	if err!=nil{
@@ -143,6 +148,23 @@ func(s *Store)FindAndLock()(*model.Job,error){
 			return nil,err
 		}
 	}
+
+	if nextRunAtStr.Valid {
+  		// This layout matches the format SQLite is storing: "YYYY-MM-DD HH:MM:SS.NNNNNNNNN+ZZ:ZZ"
+		const sqliteTimeLayout = time.RFC3339Nano
+
+		t, err := time.Parse(sqliteTimeLayout, nextRunAtStr.String)
+        if err == nil {
+			job.NextRunAt = t
+        }
+		if err!=nil{
+			log.Println(err)
+		}
+    }
+	if outputStr.Valid {
+			job.Output = outputStr.String
+	}
+
 	updateStatement := `update jobs set 
 					state = ?, 
 					updated_at=?,
@@ -171,13 +193,15 @@ func (s *Store) UpdateJob(job *model.Job) error {
 	                  state = ?, 
 	                  attempts = ?, 
 	                  updated_at = ?, 
-	                  next_run_at = ?
+	                  next_run_at = ?,
+					  output = ?
 	              WHERE id = ?`
 	_, err := s.Db.Exec(updateSQL,
 		job.State,
 		job.Attempts,
 		job.UpdatedAt,
 		job.NextRunAt,
+		job.Output,
 		job.ID,
 	)
 	return err

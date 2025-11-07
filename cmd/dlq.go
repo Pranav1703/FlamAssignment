@@ -5,6 +5,7 @@ import (
 	"log"
 	"queueCtl/internal/model"
 	"queueCtl/internal/storage"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -31,9 +32,17 @@ func DlqCmd(store *storage.Store) *cobra.Command {
 			}
 
 			fmt.Println("--- Jobs in DLQ ---")
-			fmt.Println("ID\t\tCommand\t\tAttempts")
-			for _, job := range jobs {
-				fmt.Printf("%s\t%s\t\t%d\n", job.ID, job.Command, job.Attempts)
+			for i, job := range jobs {
+				fmt.Printf("\n--- Job %d ---\n", i+1)
+				fmt.Printf("ID: \t\t%s\n", job.ID)
+				fmt.Printf("Command: \t%s\n", job.Command)
+				fmt.Printf("Attempts: \t%d\n", job.Attempts)
+				fmt.Printf("Last Updated: \t%s\n", job.UpdatedAt.Format(time.RFC3339))
+				if job.Output != "" {
+					fmt.Printf("Last Output: \n%s\n", job.Output)
+				} else {
+					fmt.Println("Last Output: \t(empty)")
+				}
 			}
 			return nil
 		},

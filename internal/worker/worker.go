@@ -64,23 +64,24 @@ func (w *Worker) processJob() {
 	// Step 2: Execute the job's command
 	// We use "sh -c" to allow for complex commands
 	cmd := exec.Command("sh", "-c", job.Command)
-	execErr := cmd.Run() // This blocks until the command finishes
-
+	output, execErr := cmd.CombinedOutput()
+	job.Output = string(output)
+	log.Printf("%s output: %s",job.ID,string(output))
 	// Step 3: Update the job based on the result
 	job.UpdatedAt = time.Now()
 
 	if execErr == nil {
 		// --- SUCCESS ---
 		job.State = model.StateCompleted
-		log.Printf("Worker %d: Job %s completed successfully", w.ID, job.ID)
+		log.Printf("Worker %d:%s completed successfully", w.ID, job.ID)
 	} else {
 		// --- FAILURE ---
-		log.Printf("Worker %d: Job %s failed: %v", w.ID, job.ID, execErr)
+		log.Printf("Worker %d:%s failed: %v", w.ID, job.ID, execErr)
 		
 		if job.Attempts >= job.MaxRetries {
 			// --- DEAD (Max retries reached) ---
 			job.State = model.StateDead
-			log.Printf("Worker %d: Job %s moved to Dead Letter Queue (DLQ)", w.ID, job.ID)
+			log.Printf("Worker %d: %s moved to Dead Letter Queue (DLQ)", w.ID, job.ID)
 		} else {
 			// --- FAILED (Retryable) ---
 			job.State = model.StateFailed
@@ -89,7 +90,7 @@ func (w *Worker) processJob() {
 			delay := math.Pow(w.Config.BackoffBase, float64(job.Attempts))
 			job.NextRunAt = time.Now().Add(time.Second * time.Duration(delay))
 			
-			log.Printf("Worker %d: Job %s will retry in %.0fs", w.ID, job.ID, delay)
+			log.Printf("Worker %d: %s will retry in %.0fs", w.ID, job.ID, delay)
 		}
 	}
 
